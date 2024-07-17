@@ -33,6 +33,8 @@
 #include "CacheTable.h"
 #include "MultiLevelCacheTableWideInterval.h"
 #include "sz_stats.h"
+#include "debug.h"
+
 
 unsigned char* SZ_skip_compress_float(float* data, size_t dataLength, size_t* outSize)
 {
@@ -63,6 +65,7 @@ inline short computeReqLength_float_MSST19(double realPrecision)
 
 unsigned int optimize_intervals_float_1D(float *oriData, size_t dataLength, double realPrecision)
 {
+	printf("optimize_intervals_float_1D\n");
 	size_t i = 0, radiusIndex;
 	float pred_value = 0, pred_err;
 	size_t *intervals = (size_t*)malloc(confparams_cpr->maxRangeRadius*sizeof(size_t));
@@ -106,6 +109,7 @@ unsigned int optimize_intervals_float_1D(float *oriData, size_t dataLength, doub
 
 unsigned int optimize_intervals_float_2D(float *oriData, size_t r1, size_t r2, double realPrecision)
 {
+	printf("optimize_intervals_float_2D\n");
 	size_t i,j, index;
 	size_t radiusIndex;
 	float pred_value = 0, pred_err;
@@ -197,6 +201,7 @@ unsigned int optimize_intervals_float_2D(float *oriData, size_t r1, size_t r2, d
 
 unsigned int optimize_intervals_float_3D(float *oriData, size_t r1, size_t r2, size_t r3, double realPrecision)
 {
+	printf("optimize_intervals_float_3D\n");
 	size_t i,j,k, index;
 	size_t radiusIndex;
 	size_t r23=r2*r3;
@@ -294,9 +299,9 @@ unsigned int optimize_intervals_float_3D(float *oriData, size_t r1, size_t r2, s
 	return powerOf2;
 }
 
-
 unsigned int optimize_intervals_float_4D(float *oriData, size_t r1, size_t r2, size_t r3, size_t r4, double realPrecision)
 {
+	printf("optimize_intervals_float_4D\n");
 	size_t i,j,k,l, index;
 	size_t radiusIndex;
 	size_t r234=r2*r3*r4;
@@ -353,6 +358,7 @@ unsigned int optimize_intervals_float_4D(float *oriData, size_t r1, size_t r2, s
 TightDataPointStorageF* SZ_compress_float_1D_MDQ(float *oriData,
 size_t dataLength, float realPrecision, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_float_1D_MDQ\n");
 #ifdef HAVE_TIMECMPR
 	float* decData = NULL;
 	if(confparams_cpr->szMode == SZ_TEMPORAL_COMPRESSION)
@@ -525,6 +531,7 @@ size_t dataLength, float realPrecision, float valueRangeSize, float medianValue_
 
 void SZ_compress_args_float_StoreOriData(float* oriData, size_t dataLength, unsigned char** newByteData, size_t *outSize)
 {
+	printf("SZ_compress_args_float_StoreOriData\n");
 	int floatSize=sizeof(float);
 	size_t k = 0, i;
 	size_t totalByteLength = 3 + MetaDataByteLength + exe_params->SZ_SIZE_TYPE + 1 + floatSize*dataLength;
@@ -560,7 +567,9 @@ void SZ_compress_args_float_StoreOriData(float* oriData, size_t dataLength, unsi
 
 char SZ_compress_args_float_NoCkRngeNoGzip_1D(int cmprType, unsigned char** newByteData, float *oriData,
 size_t dataLength, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f)
-{
+{	
+	printf("SZ_compress_args_float_NoCkRngeNoGzip_1D\n");
+	Debugger debugger = DebuggerCreate("sz_float.c|SZ_compress_args_float_NoCkRngeNoGzip_1D");
 	char compressionType = 0;
 	TightDataPointStorageF* tdps = NULL;
 
@@ -598,17 +607,21 @@ size_t dataLength, double realPrecision, size_t *outSize, float valueRangeSize, 
 #endif
 		tdps = SZ_compress_float_1D_MDQ(oriData, dataLength, realPrecision, valueRangeSize, medianValue_f);
 
+	DebuggerPrintln(debugger, "convert tdps to flat bytes");
 	convertTDPStoFlatBytes_float(tdps, newByteData, outSize);
 
-	if(*outSize>3 + MetaDataByteLength + exe_params->SZ_SIZE_TYPE + 1 + sizeof(float)*dataLength)
+	if(*outSize>3 + MetaDataByteLength + exe_params->SZ_SIZE_TYPE + 1 + sizeof(float)*dataLength) {
+		DebuggerPrintln(debugger, "outSize too big, store original ones");
 		SZ_compress_args_float_StoreOriData(oriData, dataLength, newByteData, outSize);
-
+	}
+		
 	free_TightDataPointStorageF(tdps);
 	return compressionType;
 }
 
 TightDataPointStorageF* SZ_compress_float_2D_MDQ(float *oriData, size_t r1, size_t r2, float realPrecision, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_float_2D_MDQ\n");
 #ifdef HAVE_TIMECMPR
 	float* decData = NULL;
 	if(confparams_cpr->szMode == SZ_TEMPORAL_COMPRESSION)
@@ -895,6 +908,7 @@ TightDataPointStorageF* SZ_compress_float_2D_MDQ(float *oriData, size_t r1, size
  * */
 char SZ_compress_args_float_NoCkRngeNoGzip_2D(int cmprType, unsigned char** newByteData, float *oriData, size_t r1, size_t r2, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_args_float_NoCkRngeNoGzip_2D\n");
 	size_t dataLength = r1*r2;
 	char compressionType = 0;
 	TightDataPointStorageF* tdps = NULL;
@@ -945,6 +959,7 @@ char SZ_compress_args_float_NoCkRngeNoGzip_2D(int cmprType, unsigned char** newB
 
 TightDataPointStorageF* SZ_compress_float_3D_MDQ(float *oriData, size_t r1, size_t r2, size_t r3, float realPrecision, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_float_3D_MDQ\n");
 #ifdef HAVE_TIMECMPR
 	float* decData = NULL;
 	if(confparams_cpr->szMode == SZ_TEMPORAL_COMPRESSION)
@@ -1421,6 +1436,7 @@ TightDataPointStorageF* SZ_compress_float_3D_MDQ(float *oriData, size_t r1, size
  * */
 char SZ_compress_args_float_NoCkRngeNoGzip_3D(int cmprType, unsigned char** newByteData, float *oriData, size_t r1, size_t r2, size_t r3, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_args_float_NoCkRngeNoGzip_3D\n");
 	size_t dataLength = r1*r2*r3;
 	char compressionType = 0;
 	TightDataPointStorageF* tdps = NULL;
@@ -1478,6 +1494,7 @@ char SZ_compress_args_float_NoCkRngeNoGzip_3D(int cmprType, unsigned char** newB
 
 TightDataPointStorageF* SZ_compress_float_4D_MDQ(float *oriData, size_t r1, size_t r2, size_t r3, size_t r4, double realPrecision, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_float_4D_MDQ\n");
 	float recip_realPrecision = 1/realPrecision;
 	unsigned int quantization_intervals;
 	if(exe_params->optQuantMode==1)
@@ -1807,6 +1824,7 @@ TightDataPointStorageF* SZ_compress_float_4D_MDQ(float *oriData, size_t r1, size
 
 char SZ_compress_args_float_NoCkRngeNoGzip_4D(unsigned char** newByteData, float *oriData, size_t r1, size_t r2, size_t r3, size_t r4, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_args_float_NoCkRngeNoGzip_4D\n");
 	TightDataPointStorageF* tdps = SZ_compress_float_4D_MDQ(oriData, r1, r2, r3, r4, realPrecision, valueRangeSize, medianValue_f);
 
 	convertTDPStoFlatBytes_float(tdps, newByteData, outSize);
@@ -1824,6 +1842,7 @@ char SZ_compress_args_float_NoCkRngeNoGzip_4D(unsigned char** newByteData, float
 TightDataPointStorageF* SZ_compress_float_1D_MDQ_MSST19(float *oriData,
 size_t dataLength, double realPrecision, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_float_1D_MDQ_MSST19\n");
 #ifdef HAVE_TIMECMPR
 	float* decData = NULL;
 	if(confparams_cpr->szMode == SZ_TEMPORAL_COMPRESSION)
@@ -1994,6 +2013,7 @@ size_t dataLength, double realPrecision, float valueRangeSize, float medianValue
 
 TightDataPointStorageF* SZ_compress_float_2D_MDQ_MSST19(float *oriData, size_t r1, size_t r2, double realPrecision, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_float_2D_MDQ_MSST19\n");
 #ifdef HAVE_TIMECMPR
 	float* decData = NULL;
 	if(confparams_cpr->szMode == SZ_TEMPORAL_COMPRESSION)
@@ -2269,6 +2289,7 @@ TightDataPointStorageF* SZ_compress_float_2D_MDQ_MSST19(float *oriData, size_t r
 
 TightDataPointStorageF* SZ_compress_float_3D_MDQ_MSST19(float *oriData, size_t r1, size_t r2, size_t r3, double realPrecision, float valueRangeSize, float medianValue_f)
 {
+	printf("SZ_compress_float_3D_MDQ_MSST19\n");
 #ifdef HAVE_TIMECMPR
 	float* decData = NULL;
 	if(confparams_cpr->szMode == SZ_TEMPORAL_COMPRESSION)
@@ -2727,6 +2748,7 @@ TightDataPointStorageF* SZ_compress_float_3D_MDQ_MSST19(float *oriData, size_t r
 
 void SZ_compress_args_float_withinRange(unsigned char** newByteData, float *oriData, size_t dataLength, size_t *outSize)
 {
+	printf("SZ_compress_args_float_withinRange\n");
 	TightDataPointStorageF* tdps = (TightDataPointStorageF*) malloc(sizeof(TightDataPointStorageF));
 	tdps->rtypeArray = NULL;
 	tdps->typeArray = NULL;
@@ -2812,6 +2834,8 @@ int SZ_compress_args_float(int cmprType, int withRegression, unsigned char** new
 size_t r5, size_t r4, size_t r3, size_t r2, size_t r1, size_t *outSize,
 int errBoundMode, double absErr_Bound, double relBoundRatio, double pwRelBoundRatio)
 {
+	printf("SZ_compress_args_float\n");
+	Debugger debugger =DebuggerCreate("sz_float.c|SZ_compress_args_float");
 	confparams_cpr->dataType = SZ_FLOAT;
 	confparams_cpr->errorBoundMode = errBoundMode; //this is used to print the metadata if needed...
 	if(errBoundMode==PW_REL)
@@ -2885,6 +2909,7 @@ int errBoundMode, double absErr_Bound, double relBoundRatio, double pwRelBoundRa
 
 		if (r2==0)
 		{
+			DebuggerPrintln(debugger, "r2 = 0");
 			if(confparams_cpr->errorBoundMode>=PW_REL)
 			{
 				if(confparams_cpr->accelerate_pw_rel_compression && confparams_cpr->maxRangeRadius <= 32768)
@@ -3021,11 +3046,13 @@ int errBoundMode, double absErr_Bound, double relBoundRatio, double pwRelBoundRa
 		//Call Zstd or Gzip to do the further compression.
 		if(confparams_cpr->szMode==SZ_BEST_SPEED)
 		{
+			DebuggerPrintln(debugger, "SZMode: Speed");
 			*outSize = tmpOutSize;
 			*newByteData = tmpByteData;
 		}
 		else if(confparams_cpr->szMode==SZ_BEST_COMPRESSION || confparams_cpr->szMode==SZ_DEFAULT_COMPRESSION || confparams_cpr->szMode==SZ_TEMPORAL_COMPRESSION)
 		{
+			DebuggerPrintln(debugger, "SZMode: Compression");
 #if HAVE_WRITESTATS
       writePreEncodingSize(tmpOutSize);
 #endif
@@ -3034,7 +3061,7 @@ int errBoundMode, double absErr_Bound, double relBoundRatio, double pwRelBoundRa
 		}
 		else
 		{
-			printf("Error: Wrong setting of confparams_cpr->szMode in the float compression.\n");
+			DebuggerPrintln(debugger, "Error: Wrong setting of confparams_cpr->szMode in the float compression.\n");
 			status = SZ_MERR; //mode error
 		}
 	}
@@ -3049,6 +3076,7 @@ size_t s5, size_t s4, size_t s3, size_t s2, size_t s1,
 size_t e5, size_t e4, size_t e3, size_t e2, size_t e1,
 size_t *outSize, int errBoundMode, double absErr_Bound, double relBoundRatio)
 {
+	printf("SZ_compress_args_float_subblock\n");
 	int status = SZ_SCES;
 	float valueRangeSize = 0, medianValue = 0;
 	computeRangeSize_float_subblock(oriData, &valueRangeSize, &medianValue, r5, r4, r3, r2, r1, s5, s4, s3, s2, s1, e5, e4, e3, e2, e1);
@@ -3122,6 +3150,7 @@ size_t *outSize, int errBoundMode, double absErr_Bound, double relBoundRatio)
 void SZ_compress_args_float_NoCkRnge_1D_subblock(unsigned char* compressedBytes, float *oriData, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f,
 size_t r1, size_t s1, size_t e1)
 {
+	printf("SZ_compress_args_float_NoCkRnge_1D_subblock\n");
 	TightDataPointStorageF* tdps = SZ_compress_float_1D_MDQ_subblock(oriData, realPrecision, valueRangeSize, medianValue_f, r1, s1, e1);
 
 	if (confparams_cpr->szMode==SZ_BEST_SPEED)
@@ -3149,6 +3178,7 @@ size_t r1, size_t s1, size_t e1)
 void SZ_compress_args_float_NoCkRnge_2D_subblock(unsigned char* compressedBytes, float *oriData, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f,
 size_t r2, size_t r1, size_t s2, size_t s1, size_t e2, size_t e1)
 {
+	printf("SZ_compress_args_float_NoCkRnge_2D_subblock\n");
 	TightDataPointStorageF* tdps = SZ_compress_float_2D_MDQ_subblock(oriData, realPrecision, valueRangeSize, medianValue_f, r2, r1, s2, s1, e2, e1);
 
 	if (confparams_cpr->szMode==SZ_BEST_SPEED)
@@ -3176,6 +3206,7 @@ size_t r2, size_t r1, size_t s2, size_t s1, size_t e2, size_t e1)
 void SZ_compress_args_float_NoCkRnge_3D_subblock(unsigned char* compressedBytes, float *oriData, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f,
 size_t r3, size_t r2, size_t r1, size_t s3, size_t s2, size_t s1, size_t e3, size_t e2, size_t e1)
 {
+	printf("SZ_compress_args_float_NoCkRnge_3D_subblock\n");
 	TightDataPointStorageF* tdps = SZ_compress_float_3D_MDQ_subblock(oriData, realPrecision, valueRangeSize, medianValue_f, r3, r2, r1, s3, s2, s1, e3, e2, e1);
 
 	if (confparams_cpr->szMode==SZ_BEST_SPEED)
@@ -3203,6 +3234,7 @@ size_t r3, size_t r2, size_t r1, size_t s3, size_t s2, size_t s1, size_t e3, siz
 void SZ_compress_args_float_NoCkRnge_4D_subblock(unsigned char* compressedBytes, float *oriData, double realPrecision, size_t *outSize, float valueRangeSize, float medianValue_f,
 size_t r4, size_t r3, size_t r2, size_t r1, size_t s4, size_t s3, size_t s2, size_t s1, size_t e4, size_t e3, size_t e2, size_t e1)
 {
+	printf("SZ_compress_args_float_NoCkRnge_4D_subblock\n");
 	TightDataPointStorageF* tdps = SZ_compress_float_4D_MDQ_subblock(oriData, realPrecision, valueRangeSize, medianValue_f, r4, r3, r2, r1, s4, s3, s2, s1, e4, e3, e2, e1);
 
 	if (confparams_cpr->szMode==SZ_BEST_SPEED)
@@ -3229,7 +3261,8 @@ size_t r4, size_t r3, size_t r2, size_t r1, size_t s4, size_t s3, size_t s2, siz
 }
 
 unsigned int optimize_intervals_float_1D_subblock(float *oriData, double realPrecision, size_t r1, size_t s1, size_t e1)
-{
+{	
+	printf("optimize_intervals_float_1D_subblock\n");
 	size_t dataLength = e1 - s1 + 1;
 	oriData = oriData + s1;
 
@@ -3277,6 +3310,7 @@ unsigned int optimize_intervals_float_1D_subblock(float *oriData, double realPre
 
 unsigned int optimize_intervals_float_2D_subblock(float *oriData, double realPrecision, size_t r1, size_t r2, size_t s1, size_t s2, size_t e1, size_t e2)
 {
+	printf("optimize_intervals_float_2D_subblock\n");
 	size_t R1 = e1 - s1 + 1;
 	size_t R2 = e2 - s2 + 1;
 
@@ -3326,6 +3360,7 @@ unsigned int optimize_intervals_float_2D_subblock(float *oriData, double realPre
 
 unsigned int optimize_intervals_float_3D_subblock(float *oriData, double realPrecision, size_t r1, size_t r2, size_t r3, size_t s1, size_t s2, size_t s3, size_t e1, size_t e2, size_t e3)
 {
+	printf("optimize_intervals_float_3D_subblock\n");
 	size_t R1 = e1 - s1 + 1;
 	size_t R2 = e2 - s2 + 1;
 	size_t R3 = e3 - s3 + 1;
@@ -3382,6 +3417,7 @@ unsigned int optimize_intervals_float_3D_subblock(float *oriData, double realPre
 unsigned int optimize_intervals_float_4D_subblock(float *oriData, double realPrecision,
 size_t r1, size_t r2, size_t r3, size_t r4, size_t s1, size_t s2, size_t s3, size_t s4, size_t e1, size_t e2, size_t e3, size_t e4)
 {
+	printf("optimize_intervals_float_4D_subblock\n");
 	size_t R1 = e1 - s1 + 1;
 	size_t R2 = e2 - s2 + 1;
 	size_t R3 = e3 - s3 + 1;
@@ -3444,6 +3480,7 @@ size_t r1, size_t r2, size_t r3, size_t r4, size_t s1, size_t s2, size_t s3, siz
 TightDataPointStorageF* SZ_compress_float_1D_MDQ_subblock(float *oriData, double realPrecision, float valueRangeSize, float medianValue_f,
 size_t r1, size_t s1, size_t e1)
 {
+	printf("SZ_compress_float_1D_MDQ_subblock\n");
 	size_t dataLength = e1 - s1 + 1;
 	unsigned int quantization_intervals;
 	if(exe_params->optQuantMode==1)
@@ -3566,6 +3603,7 @@ size_t r1, size_t s1, size_t e1)
 TightDataPointStorageF* SZ_compress_float_2D_MDQ_subblock(float *oriData, double realPrecision, float valueRangeSize, float medianValue_f,
 size_t r1, size_t r2, size_t s1, size_t s2, size_t e1, size_t e2)
 {
+	printf("SZ_compress_float_2D_MDQ_subblock\n");
 	unsigned int quantization_intervals;
 	if(exe_params->optQuantMode==1)
 	{
@@ -3777,6 +3815,7 @@ size_t r1, size_t r2, size_t s1, size_t s2, size_t e1, size_t e2)
 TightDataPointStorageF* SZ_compress_float_3D_MDQ_subblock(float *oriData, double realPrecision, float valueRangeSize, float medianValue_f,
 size_t r1, size_t r2, size_t r3, size_t s1, size_t s2, size_t s3, size_t e1, size_t e2, size_t e3)
 {
+	printf("SZ_compress_float_3D_MDQ_subblock\n");
 	unsigned int quantization_intervals;
 	if(exe_params->optQuantMode==1)
 	{
@@ -4118,6 +4157,7 @@ size_t r1, size_t r2, size_t r3, size_t s1, size_t s2, size_t s3, size_t e1, siz
 TightDataPointStorageF* SZ_compress_float_4D_MDQ_subblock(float *oriData, double realPrecision, float valueRangeSize, float medianValue_f,
 size_t r1, size_t r2, size_t r3, size_t r4, size_t s1, size_t s2, size_t s3, size_t s4, size_t e1, size_t e2, size_t e3, size_t e4)
 {
+	printf("SZ_compress_float_4D_MDQ_subblock\n");
 	unsigned int quantization_intervals;
 	if(exe_params->optQuantMode==1)
 	{
@@ -5108,8 +5148,6 @@ unsigned int optimize_intervals_float_1D_opt(float *oriData, size_t dataLength, 
 	free(intervals);
 	return powerOf2;
 }
-
-
 
 size_t SZ_compress_float_1D_MDQ_RA_block(float * block_ori_data, float * mean, size_t dim_0, size_t block_dim_0, double realPrecision, int * type, float * unpredictable_data){
 
@@ -6280,6 +6318,7 @@ unsigned char * SZ_compress_float_2D_MDQ_nonblocked_with_blocked_regression(floa
 	free(prediction_buffer_1);
 	free(prediction_buffer_2);
 
+	printf("|SZ_compress_float_2D_MDQ_nonblocked_with_blocked_regression|huffman coding\n");
 	int stateNum = 2*quantization_intervals;
 	HuffmanTree* huffmanTree = createHuffmanTree(stateNum);
 
@@ -6390,8 +6429,6 @@ unsigned char * SZ_compress_float_2D_MDQ_nonblocked_with_blocked_regression(floa
 
 	return result;
 }
-
-
 
 unsigned int optimize_intervals_float_3D_with_freq_and_dense_pos(float *oriData, size_t r1, size_t r2, size_t r3, double realPrecision, float * dense_pos, float * max_freq, float * mean_freq)
 {
@@ -6521,7 +6558,6 @@ unsigned int optimize_intervals_float_3D_with_freq_and_dense_pos(float *oriData,
 	free(intervals);
 	return powerOf2;
 }
-
 
 // 3D:  modified for higher performance
 unsigned char * SZ_compress_float_3D_MDQ_nonblocked_with_blocked_regression(float *oriData, size_t r1, size_t r2, size_t r3, float realPrecision, size_t * comp_size){
@@ -7487,7 +7523,6 @@ unsigned char * SZ_compress_float_3D_MDQ_nonblocked_with_blocked_regression(floa
 	*comp_size = totalEncodeSize;
 	return result;
 }
-
 
 unsigned char * SZ_compress_float_3D_MDQ_random_access_with_blocked_regression(float *oriData, size_t r1, size_t r2, size_t r3, double realPrecision, size_t * comp_size){
 
@@ -8569,6 +8604,7 @@ unsigned char * SZ_compress_float_1D_MDQ_decompression_random_access_with_blocke
 	}
 	free(pred_buffer);
 	int stateNum = 2*quantization_intervals;
+	printf("|SZ_compress_float_1D_MDQ_decompression_random_access_with_blocked_regression|huffman coding...\n");
 	HuffmanTree* huffmanTree = createHuffmanTree(stateNum);
 
 	size_t nodeCount = 0;
@@ -8710,6 +8746,7 @@ unsigned char * SZ_compress_float_1D_MDQ_decompression_random_access_with_blocke
 
 unsigned char * SZ_compress_float_2D_MDQ_decompression_random_access_with_blocked_regression(float *oriData, size_t r1, size_t r2, double realPrecision, size_t * comp_size){
 
+	printf("|SZ_compress_float_2D_MDQ_decompression_random_access_with_blocked_regression|\n");
 	unsigned int quantization_intervals;
 	float sz_sample_correct_freq = -1;//0.5; //-1
 	float dense_pos;

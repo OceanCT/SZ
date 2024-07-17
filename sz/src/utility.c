@@ -173,6 +173,7 @@ int is_lossless_compressed_data(unsigned char* compressedBytes, size_t cmpSize)
 
 uint64_t sz_lossless_compress(int losslessCompressor, int level, unsigned char* data, uint64_t dataLength, unsigned char** compressBytes)
 {
+	printf("SZ LossLess Compressing\n");
 	uint64_t outSize = 0; 
 	size_t estimatedCompressedSize = 0;
 	switch(losslessCompressor)
@@ -181,6 +182,7 @@ uint64_t sz_lossless_compress(int losslessCompressor, int level, unsigned char* 
 		outSize = zlib_compress5(data, dataLength, compressBytes, level);
 		break;
 	case ZSTD_COMPRESSOR:
+		printf("ZSTD Compressing\n");
 		if(dataLength < 100) 
 			estimatedCompressedSize = 200;
 		else

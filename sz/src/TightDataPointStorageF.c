@@ -280,7 +280,7 @@ void new_TightDataPointStorageF(TightDataPointStorageF **this,
 		unsigned char resiBitLength, 
 		double realPrecision, float medianValue, char reqLength, unsigned int intervals, 
 		unsigned char* pwrErrBoundBytes, size_t pwrErrBoundBytes_size, unsigned char radExpo) {
-	
+	printf("|new_TightDataPointStorageF|\n");
 	*this = (TightDataPointStorageF *)malloc(sizeof(TightDataPointStorageF));
 	(*this)->allSameData = 0;
 	(*this)->realPrecision = realPrecision;

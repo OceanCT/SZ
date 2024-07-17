@@ -451,7 +451,7 @@ unsigned char *SZ_compress(int dataType, void *data, size_t *outSize, size_t r5,
     @return     compressed data (in binary stream)
 
  **/
-/*-------------------------------------------------------------------------*/
+
 unsigned char *SZ_compress_rev_args(int dataType, void *data, void *reservedValue, size_t *outSize, int errBoundMode, double absErrBound, double relBoundRatio,
 size_t r5, size_t r4, size_t r3, size_t r2, size_t r1)
 {
@@ -1483,14 +1483,12 @@ void* SZ_decompress_customize(const char* cmprName, void* userPara, int dataType
 	{
 		result = SZ_decompress(dataType, bytes, byteLength, r5, r4, r3, r2, r1);
 		* status = SZ_SCES;
-	}
-    else if(strcmp(cmprName, "SZ_Transpose")==0)
-    {
+	} else if(strcmp(cmprName, "SZ_Transpose")==0)
+        {
 		size_t n = computeDataLength(r5, r4, r3, r2, r1);
 		void* tmpData = SZ_decompress(dataType, bytes, byteLength, 0, 0, 0, 0, n);
 		result = detransposeData(tmpData, dataType, r5, r4, r3, r2, r1);
-	}
-  	else if(strcmp(cmprName, "ExaFEL")==0){
+	} else if(strcmp(cmprName, "ExaFEL")==0){
     	assert(dataType==SZ_FLOAT);
    		assert(r5==0);
     	result = exafelSZ_Decompress(userPara,bytes, r4, r3, r2, r1,byteLength);

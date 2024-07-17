@@ -107,7 +107,7 @@ endif()
 find_package(OpenMP)
 
 add_subdirectory(sz)
-option(BUILD_SZ_EXAMPLES "build sz example" OFF)
+option(BUILD_SZ_EXAMPLES "build sz example" ON)
 if(BUILD_SZ_EXAMPLES)
   add_subdirectory(example)
 endif()

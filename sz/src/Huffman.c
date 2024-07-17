@@ -2,7 +2,7 @@
  *  @file Huffman.c
  *  @author Sheng Di
  *  @date Aug., 2016
- *  @brief Customized Huffman Encoding, Compression and Decompression functions
+ *  @brief Customized Huffman Encod9ing, Compression and Decompression functions
  *  (C) 2016 by Mathematics and Computer Science (MCS), Argonne National Laboratory.
  *      See COPYRIGHT in top-level directory.
  */
@@ -12,10 +12,16 @@
 #include <string.h>
 #include "Huffman.h"
 #include "sz.h"
-
+#include "lpaq.h"
+#include "bitpacking.h"
+#include <stdlib.h>
+#define USE_LPAQ 1
+#define LPAQ_LEVEL 9
+#define USE_BITPACK 0
 
 HuffmanTree* createHuffmanTree(int stateNum)
 {
+	printf("CreateHuffmanTree, stateNum: %d\n", stateNum);
 	HuffmanTree *huffmanTree = (HuffmanTree*)malloc(sizeof(HuffmanTree));
 	memset(huffmanTree, 0, sizeof(HuffmanTree));
 	huffmanTree->stateNum = stateNum;
@@ -164,6 +170,12 @@ void build_code(HuffmanTree *huffmanTree, node n, int len, uint64_t out1, uint64
  * */
 void init(HuffmanTree* huffmanTree, int *s, size_t length)
 {
+	printf("Init HuffmanTree, length:%d\n", length);
+	size_t tmp_i;
+	// for(tmp_i = 0; tmp_i < length; tmp_i++) {
+	// 	printf("%d ", s[tmp_i]);
+	// }
+	// printf("\n");
 	size_t i, index;
 	size_t *freq = (size_t *)malloc(huffmanTree->allNodes*sizeof(size_t));
 	memset(freq, 0, huffmanTree->allNodes*sizeof(size_t));
@@ -459,7 +471,6 @@ void pad_tree_uchar(HuffmanTree* huffmanTree, unsigned char* L, unsigned char* R
 		pad_tree_uchar(huffmanTree, L,R,C,t, huffmanTree->n_inode, rroot);
 	}
 }
-
 void pad_tree_ushort(HuffmanTree* huffmanTree, unsigned short* L, unsigned short* R, unsigned int* C, unsigned char* t, unsigned int i, node root)
 {
 	C[i] = root->c;
@@ -479,7 +490,6 @@ void pad_tree_ushort(HuffmanTree* huffmanTree, unsigned short* L, unsigned short
 		pad_tree_ushort(huffmanTree,L,R,C,t,huffmanTree->n_inode, rroot);
 	}
 }
-
 void pad_tree_uint(HuffmanTree* huffmanTree, unsigned int* L, unsigned int* R, unsigned int* C, unsigned char* t, unsigned int i, node root)
 {
 	C[i] = root->c;
@@ -499,7 +509,6 @@ void pad_tree_uint(HuffmanTree* huffmanTree, unsigned int* L, unsigned int* R, u
 		pad_tree_uint(huffmanTree,L,R,C,t,huffmanTree->n_inode, rroot);
 	}
 }
-
 unsigned int convert_HuffTree_to_bytes_anyStates(HuffmanTree* huffmanTree, int nodeCount, unsigned char** out)
 {
 	if(nodeCount<=256)
@@ -789,34 +798,84 @@ node reconstruct_HuffTree_from_bytes_anyStates(HuffmanTree *huffmanTree, unsigne
 
 void encode_withTree(HuffmanTree* huffmanTree, int *s, size_t length, unsigned char **out, size_t *outSize)
 {
-	size_t i;
-	int nodeCount = 0;
-	unsigned char *treeBytes, buffer[4];
+	printf("|encode_withTree|, length: %d\n", length);
+	if(USE_LPAQ && (USE_BITPACK == 0)) {
+		lpaq_compress(s, length, LPAQ_LEVEL, out, outSize);
+	} else if(USE_LPAQ && USE_BITPACK) {
+		// bitpacking s 
+		int base, bitwidth, bitlength;
+		unsigned int* bitpackbits;
+		bitpack(s, length, &bitpackbits, &bitlength, &bitwidth, &base);
+		printf("originallength = %d, bitlength = %d, bitwidth = %d, base = %d\n", 
+			length, bitlength, bitwidth, base);
+		// store base, bitwidth and bitlength, which is sizeof(int) * 3 = 12 bytes
+		unsigned char* lpaqbits;
+		lpaq_compress((int *)bitpackbits, bitlength, LPAQ_LEVEL, &lpaqbits, outSize);
+		*outSize += 12;
+		*out = (unsigned char*)malloc(*outSize);
+		char buffer[4];
+		intToBytes_bigEndian(buffer, base);
+		memcpy(*out, buffer, 4);
+		intToBytes_bigEndian(buffer, bitwidth);
+		memcpy(*out+4, buffer, 4);
+		intToBytes_bigEndian(buffer, bitlength);
+		memcpy(*out+8, buffer, 4);
+		memcpy(*out+12, lpaqbits, *outSize-12);
+		free(lpaqbits);
+		free(bitpackbits);
+	} else if((USE_LPAQ == 0) && USE_BITPACK) {
+		int base, bitwidth, bitlength;
+		unsigned int* bitpackbits;
+		bitpack(s, length, &bitpackbits, &bitlength, &bitwidth, &base);
+		printf("originallength = %d, bitlength = %d, bitwidth = %d, base = %d\n", 
+			length, bitlength, bitwidth, base);
+		// store base, bitwidth and bitlength, which is sizeof(int) * 3 = 12 bytes
+		*out = (unsigned char*)malloc(bitlength * (sizeof(unsigned int) / sizeof(unsigned char)) + 12);
+		char buffer[4];
+		intToBytes_bigEndian(buffer, base);
+		memcpy(*out, buffer, 4);
+		intToBytes_bigEndian(buffer, bitwidth);
+		memcpy(*out+4, buffer, 4);
+		intToBytes_bigEndian(buffer, bitlength);
+		memcpy(*out+8, buffer, 4);
+		memcpy(*out+12, bitpackbits, bitlength * (sizeof(unsigned int) / sizeof(unsigned char)));
+		*outSize = bitlength * (sizeof(unsigned int) / sizeof(unsigned char)) + 12;
+		for(int i = 0; i < length; i++) {
+			printf("%d ", s[i]);
+		} 
+		printf("\n");
+		free(bitpackbits);
+	} else {
+		size_t i;
+		int nodeCount = 0;
+		unsigned char *treeBytes, buffer[4];
 
-	init(huffmanTree, s, length);
-	for (i = 0; i < huffmanTree->stateNum; i++)
-		if (huffmanTree->code[i]) nodeCount++;
-	nodeCount = nodeCount*2-1;
-	unsigned int treeByteSize = convert_HuffTree_to_bytes_anyStates(huffmanTree,nodeCount, &treeBytes);
-	//printf("treeByteSize = %d\n", treeByteSize);
+		init(huffmanTree, s, length);
+		for (i = 0; i < huffmanTree->stateNum; i++)
+			if (huffmanTree->code[i]) nodeCount++;
+		nodeCount = nodeCount*2-1;
+		unsigned int treeByteSize = convert_HuffTree_to_bytes_anyStates(huffmanTree,nodeCount, &treeBytes);
+		//printf("treeByteSize = %d\n", treeByteSize);
 
-	*out = (unsigned char*)malloc(length*sizeof(int)+treeByteSize);
-	intToBytes_bigEndian(buffer, nodeCount);
-	memcpy(*out, buffer, 4);
-	intToBytes_bigEndian(buffer, huffmanTree->stateNum/2); //real number of intervals
-	memcpy(*out+4, buffer, 4);
-	memcpy(*out+8, treeBytes, treeByteSize);
-	free(treeBytes);
-	size_t enCodeSize = 0;
-	encode(huffmanTree, s, length, *out+8+treeByteSize, &enCodeSize);
-	*outSize = 8+treeByteSize+enCodeSize;
-#if HAVE_WRITESTATS
-	writeHuffmanInfo(treeByteSize, enCodeSize, 0, nodeCount);
-#endif
+		*out = (unsigned char*)malloc(length*sizeof(int)+treeByteSize);
+		intToBytes_bigEndian(buffer, nodeCount);
+		memcpy(*out, buffer, 4);
+		intToBytes_bigEndian(buffer, huffmanTree->stateNum/2); //real number of intervals
+		memcpy(*out+4, buffer, 4);
+		memcpy(*out+8, treeBytes, treeByteSize);
+		free(treeBytes);
+		size_t enCodeSize = 0;
+		encode(huffmanTree, s, length, *out+8+treeByteSize, &enCodeSize);
+		*outSize = 8+treeByteSize+enCodeSize;
+	#if HAVE_WRITESTATS
+		writeHuffmanInfo(treeByteSize, enCodeSize, 0, nodeCount);
+	#endif
+	}
 }
 
 int encode_withTree_MSST19(HuffmanTree* huffmanTree, int *s, size_t length, unsigned char **out, size_t *outSize)
 {
+	printf("|encode_withTree_MSST19|\n");
 	//struct ClockPoint clockPointInit;
 	//TimeDurationStart("init", &clockPointInit);
 	size_t i;
@@ -864,32 +923,64 @@ int encode_withTree_MSST19(HuffmanTree* huffmanTree, int *s, size_t length, unsi
  * */
 void decode_withTree(HuffmanTree* huffmanTree, unsigned char *s, size_t targetLength, int *out)
 {
-	size_t encodeStartIndex;
-	size_t nodeCount = bytesToInt_bigEndian(s);
-	node root = reconstruct_HuffTree_from_bytes_anyStates(huffmanTree,s+8, nodeCount);
+	printf("|decode_withTree|, length: %d\n", targetLength);
+	if(USE_LPAQ && (USE_BITPACK==0)) {
+		lpaq_decompress(s, targetLength, out);
+	}else if(USE_LPAQ && USE_BITPACK){
+		// bitunpack s
+		int base, bitwidth, bitlength;
+		base = bytesToInt_bigEndian(s);
+		bitwidth = bytesToInt_bigEndian(s+4);
+		bitlength = bytesToInt_bigEndian(s+8);
+		printf("bitwidth:%d, bitlength:%d \n", bitwidth, bitlength);
+		unsigned char* lpaqbits = (unsigned char*)(s+12);
+		unsigned int* bitpackbits = (unsigned int*)malloc(bitlength*sizeof(unsigned int));
+		lpaq_decompress(lpaqbits, bitlength, (int*)bitpackbits);
+		bitunpack(bitpackbits, bitlength, bitwidth, base, out, targetLength);
+	} else if((USE_LPAQ == 0) && USE_BITPACK) {
+		int base, bitwidth, bitlength;
+		base = bytesToInt_bigEndian(s);
+		bitwidth = bytesToInt_bigEndian(s+4);
+		bitlength = bytesToInt_bigEndian(s+8);
+		printf("base: %d, bitlength: %d, bitwidth: %d\n", base, bitlength, bitwidth);
+		bitunpack((unsigned int*)(s+12), bitlength, bitwidth, base, out, targetLength);
+		// for(int i = 0; i < targetLength; i++) {
+		// 	printf("%d ", out[i]);
+		// } 
+		// printf("\n");
+		// for(int i = 0; i < bitlength; i++) {
+		// 	printf("%u ", ((unsigned int*)(s+12))[i]);
+		// } 
+		// printf("\n");
+	} else {
+		size_t encodeStartIndex;
+		size_t nodeCount = bytesToInt_bigEndian(s);
+		node root = reconstruct_HuffTree_from_bytes_anyStates(huffmanTree,s+8, nodeCount);
 
-	//sdi: Debug
-/*	build_code(root, 0, 0, 0);
-	int i;
-	uint64_t code_1, code_2;
-	for (i = 0; i < stateNum; i++)
-		if (code[i])
-		{
-			printf("%d: %lu,%lu ; %u\n", i, (code[i])[0],(code[i])[1], cout[i]);
-			//code_1 = (code[i])[0];
-		}*/
+		//sdi: Debug
+		/*	build_code(root, 0, 0, 0);
+		int i;
+		uint64_t code_1, code_2;
+		for (i = 0; i < stateNum; i++)
+			if (code[i])
+			{
+				printf("%d: %lu,%lu ; %u\n", i, (code[i])[0],(code[i])[1], cout[i]);
+				//code_1 = (code[i])[0];
+			}*/
 
-	if(nodeCount<=256)
-		encodeStartIndex = 1+3*nodeCount*sizeof(unsigned char)+nodeCount*sizeof(unsigned int);
-	else if(nodeCount<=65536)
-		encodeStartIndex = 1+2*nodeCount*sizeof(unsigned short)+nodeCount*sizeof(unsigned char)+nodeCount*sizeof(unsigned int);
-	else
-		encodeStartIndex = 1+3*nodeCount*sizeof(unsigned int)+nodeCount*sizeof(unsigned char);
-	decode(s+8+encodeStartIndex, targetLength, root, out);
+		if(nodeCount<=256)
+			encodeStartIndex = 1+3*nodeCount*sizeof(unsigned char)+nodeCount*sizeof(unsigned int);
+		else if(nodeCount<=65536)
+			encodeStartIndex = 1+2*nodeCount*sizeof(unsigned short)+nodeCount*sizeof(unsigned char)+nodeCount*sizeof(unsigned int);
+		else
+			encodeStartIndex = 1+3*nodeCount*sizeof(unsigned int)+nodeCount*sizeof(unsigned char);
+		decode(s+8+encodeStartIndex, targetLength, root, out);
+	}
 }
 
 void decode_withTree_MSST19(HuffmanTree* huffmanTree, unsigned char *s, size_t targetLength, int *out, int maxBits)
 {
+	printf("|decode_withTree_MSST19|\n");
 	size_t encodeStartIndex;
 	size_t nodeCount = bytesToInt_bigEndian(s);
 	node root = reconstruct_HuffTree_from_bytes_anyStates(huffmanTree,s+8, nodeCount);

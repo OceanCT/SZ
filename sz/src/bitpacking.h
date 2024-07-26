@@ -13,7 +13,7 @@ struct BitPacker {
 unsigned int to_uint(struct BitPacker bp) {
     int res = 0;
     for(int i = 0; i < 32; i++) {
-        res = res | (bp.buffer[i] << i);
+        res = res | (bp.buffer[i] << (31 - i));
     }
     return res;
 }
@@ -36,8 +36,8 @@ struct BitUnpacker {
 
 void bitload(struct BitUnpacker* bp, unsigned int s) {
     for(int i = 0; i < 32; i++) {
-        bp->buffer[bp->p2] = s & 1;
-        s = s >> 1;
+        bp->buffer[bp->p2] = (s >> 31) & 1;
+        s = s << 1;
         bp->p2 = (bp->p2 + 1) % 64;
     }
     bp->leagalsize += 32;

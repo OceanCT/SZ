@@ -91,7 +91,10 @@ set_target_properties (SZ PROPERTIES
     OUTPUT_NAME_MINSIZEREL     ${LIB_RELEASE_NAME}
     OUTPUT_NAME_RELWITHDEBINFO ${LIB_RELEASE_NAME}
   )
-
+add_library (epaq 
+  src/epaq.cpp
+)
+target_link_libraries(SZ PUBLIC epaq)
 if (WIN32 AND NOT MINGW)
     target_link_libraries (SZ PUBLIC ${ZLIB_dep} ${ZSTD_dep})
 else ()
@@ -133,12 +136,12 @@ if(BUILD_STATS)
   target_compile_definitions(SZ PUBLIC HAVE_WRITESTATS)
 endif()
 
-install (TARGETS SZ ${thirdparty_export} EXPORT SZConfig
+install (TARGETS SZ ${thirdparty_export} epaq EXPORT SZConfig
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  )
+)
 
 install (EXPORT SZConfig DESTINATION share/SZ/cmake)
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sz)
-export(TARGETS SZ FILE SZ.cmake)
+export(TARGETS SZ epaq FILE SZ.cmake)

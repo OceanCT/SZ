@@ -77,7 +77,8 @@ void bitpack(int *origin, size_t length, unsigned int** res, int* res_len, int* 
         (*bitwidth)++;
         tmp >>= 1;
     }
-    *bitwidth = (*bitwidth+7) / 8 * 8;
+    // *bitwidth = *bitwidth + 7;
+    // *bitwidth = (*bitwidth+7) / 8 * 8;
     *res_len = ((long long)length * (*bitwidth) + 31) / 32;
 
     // if bitwidth is 0, it means all numbers are the same

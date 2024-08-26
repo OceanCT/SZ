@@ -265,6 +265,7 @@ public:
 
   // Set a context
   void set(int cx) {
+    // printf("%d ", cx); 
     assert(cx>=0 && cx<M);
     cxt=cx;
   }
@@ -361,16 +362,21 @@ MatchModel::MatchModel(int n): N(n/2-1), HN(n/8-1), buf(0), ht(0), pos(0),
   alloc(buf, N+1);
   alloc(ht, HN+1);
 }
-
+// int printt = 1000;
+int printt = 0; 
 int MatchModel::p(int y, Mixer& m) {
-
+  printt--;
+  if(printt >= 0) {
+    printf("len: %d, bcount: %d, pos: %d, h1: %d, h2: %d\n",
+      len, bcount, pos, h1, h2);
+  }
   // update context
   c0+=c0+y;
   ++bcount;
   if (bcount==8) {
     bcount=0;
-    h1=h1*(3<<3)+c0&HN;
-    h2=h2*(5<<5)+c0&HN;
+    h1=h1*(3<<3)+c0&HN;// 24 16
+    h2=h2*(5<<5)+c0&HN;// 160 64 128
     buf[pos++]=c0;
     c0=1;
     pos&=N;
@@ -412,6 +418,7 @@ int MatchModel::p(int y, Mixer& m) {
   }
   else
     len=0;
+  if(printt>=0) printf("cxt=%d\n", cxt);
   m.add(stretch(sm.p(y, cxt)));
 
   // update index
@@ -455,16 +462,16 @@ void Predictor::update(int y) {
   static StateMap sm[5];
   static APM a1(0x100), a2(0x4000);
   static U32 h[5];
-  static Mixer m(7, 80);
+  static Mixer m(4, 80);
   static MatchModel mm(MEM);  // predicts next bit by matching context
   assert(MEM>0);
 
   // update model
   assert(y==0 || y==1);
   *cp[0]=nex(*cp[0], y);
-  *cp[1]=nex(*cp[1], y);
+  // *cp[1]=nex(*cp[1], y);
   *cp[2]=nex(*cp[2], y);
-  *cp[3]=nex(*cp[3], y);
+  // *cp[3]=nex(*cp[3], y);
   *cp[4]=nex(*cp[4], y);
   m.update(y);
 
@@ -475,31 +482,31 @@ void Predictor::update(int y) {
     c0-=256;
     c4=c4<<8|c0;
     h[0]=c0<<8;  // order 1
-    h[1]=(c4&0xffff)<<5|0x57000000;  // order 2 (c4&0xffff|0x570) << 5 // 010101110000
+    // h[1]=(c4&0xffff)<<5|0x57000000;  // order 2 (c4&0xffff|0x570) << 5 // 010101110000
     h[2]=(c4<<8)*3;  // order 3
-    h[3]=c4*5;  // order 4
+    // h[3]=c4*5;  // order 4
     h[4]=h[4]*(11<<5)+c0*13&0x3fffffff;  // order 6
-    if (c0>=65 && c0<=90) c0+=32;  // lowercase unigram word order
-    if (c0>=97 && c0<=122) h[5]=(h[5]+c0)*(7<<3);
-    else h[5]=0;
-    cp[1]=t[h[1]]+1;
+    // if (c0>=65 && c0<=90) c0+=32;  // lowercase unigram word order
+    // if (c0>=97 && c0<=122) h[5]=(h[5]+c0)*(7<<3);
+    // else h[5]=0;
+    // cp[1]=t[h[1]]+1;
     cp[2]=t[h[2]]+1;
-    cp[3]=t[h[3]]+1;
+    // cp[3]=t[h[3]]+1;
     cp[4]=t[h[4]]+1;
     c0=1;
     bcount=0;
   }
   if (bcount==4) {
-    cp[1]=t[h[1]+c0]+1;
+    // cp[1]=t[h[1]+c0]+1;
     cp[2]=t[h[2]+c0]+1;
-    cp[3]=t[h[3]+c0]+1;
+    // cp[3]=t[h[3]+c0]+1;
     cp[4]=t[h[4]+c0]+1;
   }
   else if (bcount>0) {
     int j=y+1<<(bcount&3)-1;
-    cp[1]+=j;
+    // cp[1]+=j;
     cp[2]+=j;
-    cp[3]+=j;
+    // cp[3]+=j;
     cp[4]+=j;
   }
   cp[0]=t0+h[0]+c0;
@@ -509,15 +516,15 @@ void Predictor::update(int y) {
   int order=0;
   if (len==0) {
     if (*cp[4]) ++order;
-    if (*cp[3]) ++order;
+    // if (*cp[3]) ++order;
     if (*cp[2]) ++order;
-    if (*cp[1]) ++order;
+    // if (*cp[1]) ++order;
   }
   else order=5+(len>=8)+(len>=12)+(len>=16)+(len>=32);
   m.add(stretch(sm[0].p(y, *cp[0])));
-  m.add(stretch(sm[1].p(y, *cp[1])));
+  // m.add(stretch(sm[1].p(y, *cp[1])));
   m.add(stretch(sm[2].p(y, *cp[2])));
-  m.add(stretch(sm[3].p(y, *cp[3])));
+  // m.add(stretch(sm[3].p(y, *cp[3])));
   m.add(stretch(sm[4].p(y, *cp[4])));
   m.set(order+10*(h[0]>>13));
   pr=m.p();

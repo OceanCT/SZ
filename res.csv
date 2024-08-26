@@ -1,0 +1,13 @@
+original file size, method, sz file size, compression ratio, compression time, decompression time, other info
+11477760,  Huffman,             3574421, 3.211082    0.105743    0.107200, pw_rel 1e-2   
+11477760,  lpaq1(3),            3513880, 3.266406,   5.105349,   3.848835, pw_rel 1e-2
+11477760,  lpaq1(3) + bitpack,  3562169, 3.222127,   3.943261,   2.096169, bitpack补0(9->16); pw_rel 1e-2
+11477760,  lpaq1(3) + bitpack,  3562150, 3.222144,   3.929279,   2.094515, bitpack补0(9->16); pw_rel 1e-2; 修改Matchmodel中h1与h2的计算方式
+
+357660280, Huffman,            47386122, 7.547785,   3.377919,   2.329239, pw_rel 1e-2
+357660280, lpaq1(3)          , 40540417, 8.822314, 137.001908, 118.711470, pw_rel 1e-2
+357660280, lpaq1(3) + bitpack, 41346086, 8.650402,  91.007672,  64.702580, bitpack补0(9->16); pw_rel 1e-2
+357660280, lpaq1(3) + bitpack, 48438741, 7.383765,  83.200227,  49.011444, bitpack补0(9->12); pw_rel 1e-2; 修改Matchmodel中h1与h2的计算方式
+357660280, lpaq1(3) + bitpack, 41348215, 8.649957,  90.606649,  64.557220, bitpack补0(9->16); pw_rel 1e-2; 修改Matchmodel中h1与h2的计算方式
+357660280, lpaq1(3) + bitpack, 41267815, 8.666809,  74.040495,  70.587376, bitpack补0(9->16); pw_rel 1e-2; predictor只保留order1和order3和order6
+357660280, lpaq1(3) + bitpack, 42287677, 8.457790,  69.159682,  68.976034, bitpack补0(9->16); pw_rel 1e-2; predictor只保留order3和order6

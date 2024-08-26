@@ -43,7 +43,7 @@ int squash(int d) {
 //////////////////////////// Stretch ///////////////////////////////
 
 // Inverse of squash. stretch(d) returns ln(p/(1-p)), d scaled by 8 bits,
-// p by 12 bits.  d has range -2047 to 2047 representing -8 to 8.  
+// p by 12 bits.  d has range -2047 to 2047 representing -8 to 8.
 // p has range 0 to 4095 representing 0 to 1.
 
 class Stretch {
@@ -265,7 +265,6 @@ public:
 
   // Set a context
   void set(int cx) {
-    // printf("%d ", cx); 
     assert(cx>=0 && cx<M);
     cxt=cx;
   }
@@ -290,7 +289,7 @@ Mixer::Mixer(int n, int m):
 // index.  The second byte is a priority (0 = empty) for hash
 // replacement.  The index need not be a hash.
 
-// HashTable<B> h(n) - create using n bytes  n and B must be 
+// HashTable<B> h(n) - create using n bytes  n and B must be
 //     powers of 2 with n >= B*4, and B >= 2.
 // h[i] returns array [1..B-1] of bytes indexed by i, creating and
 //     replacing another element if needed.  Element 0 is the
@@ -356,27 +355,22 @@ public:
   int p(int y, Mixer& m);  // update bit y (0..1), predict next bit to m
 };
 
-MatchModel::MatchModel(int n): N(n/2-1), HN(n/8-1), buf(0), ht(0), pos(0), 
+MatchModel::MatchModel(int n): N(n/2-1), HN(n/8-1), buf(0), ht(0), pos(0),
     match(0), len(0), h1(0), h2(0), c0(1), bcount(0), sm(56<<8) {
   assert(n>=8 && (n&n-1)==0);
   alloc(buf, N+1);
   alloc(ht, HN+1);
 }
-// int printt = 1000;
-long long printt = 0; 
+
 int MatchModel::p(int y, Mixer& m) {
-  printt--;
-  if(printt >= 0) {
-    printf("printt: %d, len: %d, bcount: %d, pos: %d, h1: %d, h2: %d\n",
-      printt, len, bcount, pos, h1, h2);
-  }
+
   // update context
   c0+=c0+y;
   ++bcount;
   if (bcount==8) {
     bcount=0;
-    h1=h1*(3<<3)+c0&HN;// 24 16
-    h2=h2*(5<<5)+c0&HN;// 160 64 128
+    h1=h1*(3<<3)+c0&HN;
+    h2=h2*(5<<5)+c0&HN;
     buf[pos++]=c0;
     c0=1;
     pos&=N;
@@ -418,7 +412,6 @@ int MatchModel::p(int y, Mixer& m) {
   }
   else
     len=0;
-  if(printt>=0) printf("cxt=%d\n", cxt);
   m.add(stretch(sm.p(y, cxt)));
 
   // update index
@@ -444,7 +437,7 @@ class Predictor {
 public:
   Predictor();
   int p() const {
-    assert(pr>=0 && pr<4096); 
+    assert(pr>=0 && pr<4096);
     return pr;
   }
   void update(int y);
@@ -462,16 +455,16 @@ void Predictor::update(int y) {
   static StateMap sm[5];
   static APM a1(0x100), a2(0x4000);
   static U32 h[5];
-  static Mixer m(4, 80);
+  static Mixer m(6, 80);
   static MatchModel mm(MEM);  // predicts next bit by matching context
   assert(MEM>0);
 
   // update model
   assert(y==0 || y==1);
   *cp[0]=nex(*cp[0], y);
-  // *cp[1]=nex(*cp[1], y);
+  *cp[1]=nex(*cp[1], y);
   *cp[2]=nex(*cp[2], y);
-  // *cp[3]=nex(*cp[3], y);
+  *cp[3]=nex(*cp[3], y);
   *cp[4]=nex(*cp[4], y);
   m.update(y);
 
@@ -482,31 +475,28 @@ void Predictor::update(int y) {
     c0-=256;
     c4=c4<<8|c0;
     h[0]=c0<<8;  // order 1
-    // h[1]=(c4&0xffff)<<5|0x57000000;  // order 2 (c4&0xffff|0x570) << 5 // 010101110000
+    h[1]=(c4&0xffff)<<5|0x57000000;  // order 2 (c4&0xffff|0x570) << 5 // 010101110000
     h[2]=(c4<<8)*3;  // order 3
-    // h[3]=c4*5;  // order 4
+    h[3]=c4*5;  // order 4
     h[4]=h[4]*(11<<5)+c0*13&0x3fffffff;  // order 6
-    // if (c0>=65 && c0<=90) c0+=32;  // lowercase unigram word order
-    // if (c0>=97 && c0<=122) h[5]=(h[5]+c0)*(7<<3);
-    // else h[5]=0;
-    // cp[1]=t[h[1]]+1;
+    cp[1]=t[h[1]]+1;
     cp[2]=t[h[2]]+1;
-    // cp[3]=t[h[3]]+1;
+    cp[3]=t[h[3]]+1;
     cp[4]=t[h[4]]+1;
     c0=1;
     bcount=0;
   }
   if (bcount==4) {
-    // cp[1]=t[h[1]+c0]+1;
+    cp[1]=t[h[1]+c0]+1;
     cp[2]=t[h[2]+c0]+1;
-    // cp[3]=t[h[3]+c0]+1;
+    cp[3]=t[h[3]+c0]+1;
     cp[4]=t[h[4]+c0]+1;
   }
   else if (bcount>0) {
     int j=y+1<<(bcount&3)-1;
-    // cp[1]+=j;
+    cp[1]+=j;
     cp[2]+=j;
-    // cp[3]+=j;
+    cp[3]+=j;
     cp[4]+=j;
   }
   cp[0]=t0+h[0]+c0;
@@ -516,15 +506,15 @@ void Predictor::update(int y) {
   int order=0;
   if (len==0) {
     if (*cp[4]) ++order;
-    // if (*cp[3]) ++order;
+    if (*cp[3]) ++order;
     if (*cp[2]) ++order;
-    // if (*cp[1]) ++order;
+    if (*cp[1]) ++order;
   }
   else order=5+(len>=8)+(len>=12)+(len>=16)+(len>=32);
   m.add(stretch(sm[0].p(y, *cp[0])));
-  // m.add(stretch(sm[1].p(y, *cp[1])));
+  m.add(stretch(sm[1].p(y, *cp[1])));
   m.add(stretch(sm[2].p(y, *cp[2])));
-  // m.add(stretch(sm[3].p(y, *cp[3])));
+  m.add(stretch(sm[3].p(y, *cp[3])));
   m.add(stretch(sm[4].p(y, *cp[4])));
   m.set(order+10*(h[0]>>13));
   pr=m.p();
@@ -542,7 +532,7 @@ public:
   U32 x1, x2, x;
   int totalCnt;
   int tmpsize;
-  Encoder(int initialx = 0, U8* originbits = NULL) {
+  Encoder(U32 initialx = 0, U8* originbits = NULL) {
     x1 = 0, x2 = 0xffffffff;
     totalCnt = 0, tmpsize = 0;
     x = initialx;
@@ -568,19 +558,18 @@ public:
       x1<<=8;
       x2=(x2<<8)+255;
     }
-    // printf("code: %d, x1: %u, x2: %u\n", y, x1, x2);
   }
   int decode() {
     int p = predictor.p();
     p += p < 2048;
     U32 xmid=x1 + ((x2-x1)>>12)*p + ((x2-x1&0xfff)*p>>12);
     int y = x<=xmid;
-    y ? (x2 = xmid): (x1 = xmid + 1);
+    y ? (x2 = xmid) : (x1 = xmid + 1);
     predictor.update(y);
-    while((x1^x2)&0xff000000 == 0) {
+    while(((x1^x2)&0xff000000) == 0) {
       x1<<=8;
       x2=(x2<<8)+255;
-      x = (x << 8) + origin[totalCnt++] & 255;
+      x = (x << 8) + (origin[totalCnt++] & 255);
     }
     return y;
   }
@@ -615,7 +604,9 @@ void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, in
 
 void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, int outlength) {
   MEM=1<<(memLevel+20);
-  Encoder encoder = Encoder(inputbits[0], inputbits + 1);
+  U32 x = 0;
+  for (int i = 0; i < 4; ++i) x = (x << 8)+ (inputbits[i] & 255);
+  Encoder encoder = Encoder(x, inputbits + 4);
   for(int i = 0; i < outlength; i++) {
     outputbits[i] = encoder.decodebyte();
   }

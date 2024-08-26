@@ -12,5 +12,3 @@ original file size, method, sz file size, compression ratio, compression time, d
 357660280, lpaq1(3) + bitpack, 41267815, 8.666809,  74.040495,  70.587376, bitpack补0(9->16); pw_rel 1e-2; predictor只保留order1和order3和order6
 357660280, lpaq1(3) + bitpack, 42287677, 8.457790,  69.159682,  68.976034, bitpack补0(9->16); pw_rel 1e-2; predictor只保留order3和order6
 
-
-357660280, lpaq1(3) + bitpack, 40578218, /, 142.606585, 158.577389, bitpack补0(9->32); 顺序大端; pw_rel 1e-2; predictor只保留order1和order3和order6

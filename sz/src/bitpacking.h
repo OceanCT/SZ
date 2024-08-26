@@ -45,6 +45,7 @@ void bitload(struct BitUnpacker* bp, unsigned int s) {
 unsigned int bitextract(struct BitUnpacker* bp) {
     unsigned int res = 0;
     for(int i = 0; i < bp->bitwidth; i++) {
+        // res = res | (bp->buffer[bp->p1] << (bp->bitwidth - i - 1));
         res = res | (bp->buffer[bp->p1] << i);
         bp->p1 = (bp->p1 + 1) % 64;
     }
@@ -56,7 +57,7 @@ const int printflag = 0;
 void print(struct BitUnpacker* bp) {
     if(!printflag) return;
     printf("bitwidth: %d, p1: %d, p2: %d\n", bp->bitwidth, bp->p1, bp->p2);
-    for(int i = 0; i < 32; i++) {
+    for(int i = 0; i < 32; i++) {   
         printf("%d ", bp->buffer[i]);
     }
     printf("\n");
@@ -98,6 +99,8 @@ void bitpack(int *origin, size_t length, unsigned int** res, int* res_len, int* 
         for(int j = 0; j < *bitwidth; j++) {
             int add = add_bit(&bp, tmp & 1);
             tmp >>= 1;
+            // int add = add_bit(&bp, tmp >> (*bitwidth - 1 - j) & 1);
+            // tmp >>= 1;
             if(add) {
                 (*res)[pos++] = to_uint(bp);
             }

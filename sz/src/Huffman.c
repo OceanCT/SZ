@@ -15,7 +15,7 @@
 #include "lpaq.h"
 #include "bitpacking.h"
 #include <stdlib.h>
-#define USE_LPAQ 1
+#define USE_LPAQ 0
 #define LPAQ_LEVEL 3
 #define USE_BITPACK 1
 
@@ -840,10 +840,10 @@ void encode_withTree(HuffmanTree* huffmanTree, int *s, size_t length, unsigned c
 		memcpy(*out+8, buffer, 4);
 		memcpy(*out+12, bitpackbits, bitlength * (sizeof(unsigned int) / sizeof(unsigned char)));
 		*outSize = bitlength * (sizeof(unsigned int) / sizeof(unsigned char)) + 12;
-		for(int i = 0; i < length; i++) {
-			printf("%d ", s[i]);
-		} 
-		printf("\n");
+		// for(int i = 0; i < length; i++) {
+		// 	printf("%d ", s[i]);
+		// } 
+		// printf("\n");
 		free(bitpackbits);
 	} else {
 		size_t i;

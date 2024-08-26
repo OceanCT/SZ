@@ -51,7 +51,10 @@ unsigned int bitextract(struct BitUnpacker* bp) {
     bp->leagalsize -= bp->bitwidth;
     return res;
 }
+
+const int printflag = 0;
 void print(struct BitUnpacker* bp) {
+    if(!printflag) return;
     printf("bitwidth: %d, p1: %d, p2: %d\n", bp->bitwidth, bp->p1, bp->p2);
     for(int i = 0; i < 32; i++) {
         printf("%d ", bp->buffer[i]);

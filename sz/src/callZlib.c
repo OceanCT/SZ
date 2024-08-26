@@ -62,7 +62,7 @@ uint64_t zlib_compress(unsigned char* data, uint64_t dataLength, unsigned char**
 	uint64_t outSize = estCmpLen;
     	
 	*compressBytes = (unsigned char*)malloc(sizeof(unsigned char)*estCmpLen);
-	int err = compress2(*compressBytes, &outSize, data, dataLength, level);
+	int err = compress2(*compressBytes, (uLongf *)&outSize, data, dataLength, level);
 	if(err!=Z_OK)
 	{
 		printf("Error: err_code=%d; the reason may be your data size is too large (>=2^32), which cannot be compressed by standalone zlib_compress. Sol: inflace_init, ....\n", err);
@@ -267,7 +267,7 @@ uint64_t zlib_uncompress(unsigned char* compressBytes, uint64_t cmpSize, unsigne
 {
 	uint64_t outSize = targetOriSize;
 	*oriData = (unsigned char*)malloc(sizeof(unsigned char)*targetOriSize);	
-	int status = uncompress(*oriData, &outSize, compressBytes, cmpSize); 
+	int status = uncompress(*oriData, (uLongf *)&outSize, compressBytes, cmpSize); 
 	if(status!=Z_OK)
 	{
 		printf("Error: Zlib decompression error; status=%d\n", status);

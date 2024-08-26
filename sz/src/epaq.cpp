@@ -363,12 +363,12 @@ MatchModel::MatchModel(int n): N(n/2-1), HN(n/8-1), buf(0), ht(0), pos(0),
   alloc(ht, HN+1);
 }
 // int printt = 1000;
-int printt = 0; 
+long long printt = 0; 
 int MatchModel::p(int y, Mixer& m) {
   printt--;
   if(printt >= 0) {
-    printf("len: %d, bcount: %d, pos: %d, h1: %d, h2: %d\n",
-      len, bcount, pos, h1, h2);
+    printf("printt: %d, len: %d, bcount: %d, pos: %d, h1: %d, h2: %d\n",
+      printt, len, bcount, pos, h1, h2);
   }
   // update context
   c0+=c0+y;

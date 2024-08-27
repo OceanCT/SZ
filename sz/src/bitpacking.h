@@ -5,6 +5,9 @@
 #include <limits.h>
 #include <assert.h>
 
+const int order = 0; // 0 for smallend, 1 for highend
+const int addzero = 3; // number of zeros added
+
 // assume sizeof(int) == 4, which means 32bits;
 struct BitPacker {
     unsigned int buffer[32];
@@ -44,10 +47,16 @@ void bitload(struct BitUnpacker* bp, unsigned int s) {
 }
 unsigned int bitextract(struct BitUnpacker* bp) {
     unsigned int res = 0;
-    for(int i = 0; i < bp->bitwidth; i++) {
-        // res = res | (bp->buffer[bp->p1] << (bp->bitwidth - i - 1));
-        res = res | (bp->buffer[bp->p1] << i);
-        bp->p1 = (bp->p1 + 1) % 64;
+    if(order == 0) {
+        for(int i = 0; i < bp->bitwidth; i++) {
+            res = res | (bp->buffer[bp->p1] << i);
+            bp->p1 = (bp->p1 + 1) % 64;
+        }
+    } else {
+        for(int i = 0; i < bp->bitwidth; i++) {
+            res = res | (bp->buffer[bp->p1] << (bp->bitwidth - i - 1));
+            bp->p1 = (bp->p1 + 1) % 64;
+        }
     }
     bp->leagalsize -= bp->bitwidth;
     return res;
@@ -81,7 +90,7 @@ void bitpack(int *origin, size_t length, unsigned int** res, int* res_len, int* 
         (*bitwidth)++;
         tmp >>= 1;
     }
-    // *bitwidth = *bitwidth + 7;
+    *bitwidth = *bitwidth + addzero;
     // *bitwidth = (*bitwidth+7) / 8 * 8;
     *res_len = ((long long)length * (*bitwidth) + 31) / 32;
 
@@ -96,13 +105,20 @@ void bitpack(int *origin, size_t length, unsigned int** res, int* res_len, int* 
     bp.pointer = 0;
     for(int i = 0; i < length; i++) {
         unsigned int tmp = (origin[i] - *base);
-        for(int j = 0; j < *bitwidth; j++) {
-            int add = add_bit(&bp, tmp & 1);
-            tmp >>= 1;
-            // int add = add_bit(&bp, tmp >> (*bitwidth - 1 - j) & 1);
-            // tmp >>= 1;
-            if(add) {
-                (*res)[pos++] = to_uint(bp);
+        if(order == 0) {
+            for(int j = 0; j < *bitwidth; j++) {
+                int add = add_bit(&bp, tmp & 1);
+                tmp >>= 1;
+                if(add) {
+                    (*res)[pos++] = to_uint(bp);
+                }
+            }
+        } else {
+            for(int j = 0; j < *bitwidth; j++) {
+                int add = add_bit(&bp, (tmp >> (*bitwidth - 1 - j)) & 1);
+                if(add) {
+                    (*res)[pos++] = to_uint(bp);
+                }
             }
         }
     }

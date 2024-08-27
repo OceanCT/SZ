@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #define USE_LPAQ 1
 #define LPAQ_LEVEL 3
-#define USE_BITPACK 0
+#define USE_BITPACK 3
 
 HuffmanTree* createHuffmanTree(int stateNum)
 {

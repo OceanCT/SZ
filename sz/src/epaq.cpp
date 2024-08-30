@@ -457,13 +457,10 @@ void Predictor::update(int y) {
   static StateMap sm[5];
   static APM a1(0x100), a2(0x4000);
   static U32 h[5];
-  // calculate mixer size;
-  int mixer_size = 0; 
-  for(int i = 0; i <= 6; i++) {
-    mixer_size += predictor_enable[i];
-  }
-  // static Mixer m(mixer_size, 80);
-  static Mixer m(6, 80);
+
+  static Mixer m(1+predictor_enable[1]+predictor_enable[2]+
+  predictor_enable[3]+predictor_enable[4]+predictor_enable[6], 80);
+  // static Mixer m(6, 80);
   static MatchModel mm(MEM);  // predicts next bit by matching context
   assert(MEM>0);
 
@@ -546,7 +543,7 @@ public:
     x = initialx;
     origin = originbits;
   }
-  void code(int y = 0, U8** outputbits = NULL) {
+  void code(int y = 0, U8** outputbits = NULL, bool reset = false) {
     int p = predictor.p();
     p += p < 2048;
     U32 xmid=x1 + ((x2-x1)>>12)*p + ((x2-x1&0xfff)*p>>12);
@@ -599,9 +596,11 @@ void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, si
   U8* tmp = (U8*)malloc(inlength);
   Encoder encoder;
   encoder.tmpsize = inlength;
-  for(int i = 0;i < inlength; i++) {
-    for (int j = 7; j >= 0; --j) {
-      encoder.code((inputbits[i]>>j)&1, &tmp);
+  for(int i = 0; i < inlength; i++) {
+    for(int cur = i*4+3; cur >= i*4; cur--){
+      for (int j = 7; j >= 0; --j) {
+        encoder.code((inputbits[cur]>>j)&1, &tmp);
+      }
     }
   }
   *outputbits = (U8 *)malloc((encoder.totalCnt + 1) * sizeof(U8));

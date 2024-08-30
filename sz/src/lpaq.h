@@ -14,7 +14,7 @@ void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, si
 
 void lpaq_compress(int* content, size_t length, int level, unsigned char** output, size_t *output_size) {
     printf("lpaq_compress; original length: %d\n", length);
-    epaqcompress(level, length * sizeof(int), (U8 *)content, output, output_size);
+    epaqcompress(level, length, (U8 *)content, output, output_size);
     size_t real_output_size = *output_size + 9;
     printf("%ld, %d\n", real_output_size, (int)real_output_size);
     unsigned char *buffer = (unsigned char*)malloc((int)real_output_size);

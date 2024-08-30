@@ -445,6 +445,8 @@ public:
 
 Predictor::Predictor(): pr(2048) {}
 
+int predictor_enable[7]={0,1,0,1,0,0,0};
+
 void Predictor::update(int y) {
   static U8 t0[0x10000];  // order 1 cxt -> state // 2^16
   static HashTable<16> t(MEM*2);  // cxt -> state
@@ -455,17 +457,23 @@ void Predictor::update(int y) {
   static StateMap sm[5];
   static APM a1(0x100), a2(0x4000);
   static U32 h[5];
+  // calculate mixer size;
+  int mixer_size = 0; 
+  for(int i = 0; i <= 6; i++) {
+    mixer_size += predictor_enable[i];
+  }
+  // static Mixer m(mixer_size, 80);
   static Mixer m(6, 80);
   static MatchModel mm(MEM);  // predicts next bit by matching context
   assert(MEM>0);
 
   // update model
   assert(y==0 || y==1);
-  *cp[0]=nex(*cp[0], y);
-  *cp[1]=nex(*cp[1], y);
-  *cp[2]=nex(*cp[2], y);
-  *cp[3]=nex(*cp[3], y);
-  *cp[4]=nex(*cp[4], y);
+  if(predictor_enable[1]) *cp[0]=nex(*cp[0], y);
+  if(predictor_enable[2]) *cp[1]=nex(*cp[1], y);
+  if(predictor_enable[3]) *cp[2]=nex(*cp[2], y);
+  if(predictor_enable[4]) *cp[3]=nex(*cp[3], y);
+  if(predictor_enable[6]) *cp[4]=nex(*cp[4], y);
   m.update(y);
 
   // update context
@@ -474,30 +482,30 @@ void Predictor::update(int y) {
   if (c0>=256) {
     c0-=256;
     c4=c4<<8|c0;
-    h[0]=c0<<8;  // order 1
-    h[1]=(c4&0xffff)<<5|0x57000000;  // order 2 (c4&0xffff|0x570) << 5 // 010101110000
-    h[2]=(c4<<8)*3;  // order 3
-    h[3]=c4*5;  // order 4
-    h[4]=h[4]*(11<<5)+c0*13&0x3fffffff;  // order 6
-    cp[1]=t[h[1]]+1;
-    cp[2]=t[h[2]]+1;
-    cp[3]=t[h[3]]+1;
-    cp[4]=t[h[4]]+1;
+    if(predictor_enable[1]) h[0]=c0<<8;  // order 1
+    if(predictor_enable[2]) h[1]=(c4&0xffff)<<5|0x57000000;  // order 2 (c4&0xffff|0x570) << 5 // 010101110000
+    if(predictor_enable[3]) h[2]=(c4<<8)*3;  // order 3
+    if(predictor_enable[4]) h[3]=c4*5;  // order 4
+    if(predictor_enable[6]) h[4]=h[4]*(11<<5)+c0*13&0x3fffffff;  // order 6
+    if(predictor_enable[2]) cp[1]=t[h[1]]+1;
+    if(predictor_enable[3]) cp[2]=t[h[2]]+1;
+    if(predictor_enable[4]) cp[3]=t[h[3]]+1;
+    if(predictor_enable[6]) cp[4]=t[h[4]]+1;
     c0=1;
     bcount=0;
   }
   if (bcount==4) {
-    cp[1]=t[h[1]+c0]+1;
-    cp[2]=t[h[2]+c0]+1;
-    cp[3]=t[h[3]+c0]+1;
-    cp[4]=t[h[4]+c0]+1;
+    if(predictor_enable[2]) cp[1]=t[h[1]+c0]+1;
+    if(predictor_enable[3]) cp[2]=t[h[2]+c0]+1;
+    if(predictor_enable[4]) cp[3]=t[h[3]+c0]+1;
+    if(predictor_enable[6]) cp[4]=t[h[4]+c0]+1;
   }
   else if (bcount>0) {
     int j=y+1<<(bcount&3)-1;
-    cp[1]+=j;
-    cp[2]+=j;
-    cp[3]+=j;
-    cp[4]+=j;
+    if(predictor_enable[2]) cp[1]+=j;
+    if(predictor_enable[3]) cp[2]+=j;
+    if(predictor_enable[4]) cp[3]+=j;
+    if(predictor_enable[5]) cp[4]+=j;
   }
   cp[0]=t0+h[0]+c0;
 
@@ -505,17 +513,17 @@ void Predictor::update(int y) {
   int len=mm.p(y, m);
   int order=0;
   if (len==0) {
-    if (*cp[4]) ++order;
-    if (*cp[3]) ++order;
-    if (*cp[2]) ++order;
-    if (*cp[1]) ++order;
+    if(predictor_enable[6]) if (*cp[4]) ++order;
+    if(predictor_enable[4]) if (*cp[3]) ++order;
+    if(predictor_enable[3]) if (*cp[2]) ++order;
+    if(predictor_enable[2]) if (*cp[1]) ++order;
   }
   else order=5+(len>=8)+(len>=12)+(len>=16)+(len>=32);
-  m.add(stretch(sm[0].p(y, *cp[0])));
-  m.add(stretch(sm[1].p(y, *cp[1])));
-  m.add(stretch(sm[2].p(y, *cp[2])));
-  m.add(stretch(sm[3].p(y, *cp[3])));
-  m.add(stretch(sm[4].p(y, *cp[4])));
+  if(predictor_enable[1]) m.add(stretch(sm[0].p(y, *cp[0])));
+  if(predictor_enable[2]) m.add(stretch(sm[1].p(y, *cp[1])));
+  if(predictor_enable[3]) m.add(stretch(sm[2].p(y, *cp[2])));
+  if(predictor_enable[4]) m.add(stretch(sm[3].p(y, *cp[3])));
+  if(predictor_enable[6]) m.add(stretch(sm[4].p(y, *cp[4])));
   m.set(order+10*(h[0]>>13));
   pr=m.p();
   pr=pr+3*a1.pp(y, pr, c0)>>2;
@@ -584,9 +592,9 @@ public:
 
 
 extern "C" void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, int outlength);
-extern "C" void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, int* outlength);
+extern "C" void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength);
 
-void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, int* outlength) {
+void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength) {
   MEM=1<<(memLevel+20);
   U8* tmp = (U8*)malloc(inlength);
   Encoder encoder;

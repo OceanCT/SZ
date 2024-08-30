@@ -10,12 +10,15 @@
 #ifdef USING_EPAQ
 typedef unsigned char U8;
 void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, int outlength);
-void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, int* outlength);
+void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength);
 
 void lpaq_compress(int* content, size_t length, int level, unsigned char** output, size_t *output_size) {
-    printf("lpaq_compress\n");
-    epaqcompress(level, length * sizeof(int), (U8 *)content, output, (int *)output_size);
-    unsigned char *buffer = (unsigned char*)malloc(9 + *output_size);
+    printf("lpaq_compress; original length: %d\n", length);
+    epaqcompress(level, length * sizeof(int), (U8 *)content, output, output_size);
+    size_t real_output_size = *output_size + 9;
+    printf("%ld, %d\n", real_output_size, (int)real_output_size);
+    unsigned char *buffer = (unsigned char*)malloc((int)real_output_size);
+    printf("buffer is NULL: %d\n", buffer == NULL);
     intToBytes_bigEndian(buffer, *output_size + 1);
     intToBytes_bigEndian(buffer + 4, level);
     memcpy(buffer + 8, *output, *output_size);

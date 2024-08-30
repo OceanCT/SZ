@@ -5,8 +5,8 @@
 #include <limits.h>
 #include <assert.h>
 
-const int order = 0; // 0 for smallend, 1 for highend
-const int addzero = 3; // number of zeros added
+const int order = 0;
+const int addzero = 6;
 
 // assume sizeof(int) == 4, which means 32bits;
 struct BitPacker {
@@ -91,7 +91,6 @@ void bitpack(int *origin, size_t length, unsigned int** res, int* res_len, int* 
         tmp >>= 1;
     }
     *bitwidth = *bitwidth + addzero;
-    // *bitwidth = (*bitwidth+7) / 8 * 8;
     *res_len = ((long long)length * (*bitwidth) + 31) / 32;
 
     // if bitwidth is 0, it means all numbers are the same

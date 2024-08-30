@@ -445,7 +445,7 @@ public:
 
 Predictor::Predictor(): pr(2048) {}
 
-int predictor_enable[7]={0,1,0,1,0,0,0};
+int predictor_enable[7]={0,0,0,1,0,0,0};
 
 void Predictor::update(int y) {
   static U8 t0[0x10000];  // order 1 cxt -> state // 2^16
@@ -524,7 +524,7 @@ void Predictor::update(int y) {
   m.set(order+10*(h[0]>>13));
   pr=m.p();
   pr=pr+3*a1.pp(y, pr, c0)>>2;
-  pr=pr+3*a2.pp(y, pr, c0^h[0]>>2)>>2;
+  if(predictor_enable[1]) pr=pr+3*a2.pp(y, pr, c0^h[0]>>2)>>2;
 }
 
 

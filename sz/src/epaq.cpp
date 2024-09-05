@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+
 #include <ctype.h>
 #include <unistd.h>
 #define NDEBUG  // remove for debugging
@@ -159,6 +160,11 @@ public:
     assert(limit>0 && limit<1024);
     update(y, limit);
     return t[cxt=cx]>>20;
+  }
+  void clear() {
+    for (int i=0; i<N; ++i)
+      t[i]=1<<31;
+    cxt = 0;
   }
 };
 
@@ -401,7 +407,6 @@ int MatchModel::p(int y, Mixer& m) {
       }
     }
   }
-
   // predict
   int cxt=c0;
   if (len>0 && (buf[match]+256>>8-bcount)==c0) {
@@ -445,9 +450,11 @@ public:
 
 Predictor::Predictor(): pr(2048) {}
 
-int predictor_enable[7]={0,0,0,1,0,0,0};
+int predictor_enable[7]={0,1,0,1,0,0,1};
+// int cnt = 0;
 
 void Predictor::update(int y) {
+  // return;
   static U8 t0[0x10000];  // order 1 cxt -> state // 2^16
   static HashTable<16> t(MEM*2);  // cxt -> state
   static int c0=1;  // last 0-7 bits with leading 1
@@ -458,11 +465,26 @@ void Predictor::update(int y) {
   static APM a1(0x100), a2(0x4000);
   static U32 h[5];
 
-  static Mixer m(1+predictor_enable[1]+predictor_enable[2]+
+  static Mixer m(predictor_enable[0]+predictor_enable[1]+predictor_enable[2]+
   predictor_enable[3]+predictor_enable[4]+predictor_enable[6], 80);
-  // static Mixer m(6, 80);
   static MatchModel mm(MEM);  // predicts next bit by matching context
   assert(MEM>0);
+
+  // if(cnt == 8) {
+  //   cnt = 0;
+  //   cp[0] = cp[1] = cp[2] = cp[3] = cp[4] = t0;
+  //   bcount=0;
+  //   c0 = 1;
+  //   c4 = 0;
+  //   // sm[0].clear();
+  //   // sm[1].clear();
+  //   // sm[2].clear();
+  //   // sm[3].clear();
+  //   // sm[4].clear();
+  // } else {
+  //   cnt++;
+  // }
+
 
   // update model
   assert(y==0 || y==1);
@@ -504,10 +526,10 @@ void Predictor::update(int y) {
     if(predictor_enable[4]) cp[3]+=j;
     if(predictor_enable[5]) cp[4]+=j;
   }
-  cp[0]=t0+h[0]+c0;
-
+  if(predictor_enable[1]) cp[0]=t0+h[0]+c0;
   // predict
-  int len=mm.p(y, m);
+  int len = 0;
+  if(predictor_enable[0]) int len=mm.p(y, m);
   int order=0;
   if (len==0) {
     if(predictor_enable[6]) if (*cp[4]) ++order;
@@ -524,7 +546,7 @@ void Predictor::update(int y) {
   m.set(order+10*(h[0]>>13));
   pr=m.p();
   pr=pr+3*a1.pp(y, pr, c0)>>2;
-  if(predictor_enable[1]) pr=pr+3*a2.pp(y, pr, c0^h[0]>>2)>>2;
+  pr=pr+3*a2.pp(y, pr, c0^h[0]>>2)>>2;
 }
 
 
@@ -593,15 +615,19 @@ extern "C" void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** out
 
 void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength) {
   MEM=1<<(memLevel+20);
+  inlength = inlength * 4;
   U8* tmp = (U8*)malloc(inlength);
   Encoder encoder;
   encoder.tmpsize = inlength;
   for(int i = 0; i < inlength; i++) {
-    for(int cur = i*4+3; cur >= i*4; cur--){
+    // TODO: 
+    // change read and write sequence to make sure 
+    // after bitpacking the data is processed in common way.
+    // for(int cur = i*4+3; cur >= i*4; cur--){
       for (int j = 7; j >= 0; --j) {
-        encoder.code((inputbits[cur]>>j)&1, &tmp);
+        encoder.code((inputbits[i]>>j)&1, &tmp);
       }
-    }
+    // }
   }
   *outputbits = (U8 *)malloc((encoder.totalCnt + 1) * sizeof(U8));
   memcpy(*outputbits, tmp, encoder.totalCnt + 1);

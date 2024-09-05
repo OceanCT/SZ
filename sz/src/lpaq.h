@@ -16,9 +16,7 @@ void lpaq_compress(int* content, size_t length, int level, unsigned char** outpu
     printf("lpaq_compress; original length: %d\n", length);
     epaqcompress(level, length, (U8 *)content, output, output_size);
     size_t real_output_size = *output_size + 9;
-    printf("%ld, %d\n", real_output_size, (int)real_output_size);
     unsigned char *buffer = (unsigned char*)malloc((int)real_output_size);
-    printf("buffer is NULL: %d\n", buffer == NULL);
     intToBytes_bigEndian(buffer, *output_size + 1);
     intToBytes_bigEndian(buffer + 4, level);
     memcpy(buffer + 8, *output, *output_size);
@@ -27,6 +25,9 @@ void lpaq_compress(int* content, size_t length, int level, unsigned char** outpu
     *output = buffer;
     U8* printer = (U8*)content;
     *output_size += 9;
+        // for(int i = 0; i < *output_size; i++) {
+        //     printf("%d ", content[i]);
+        // }
 }
 
 void lpaq_decompress(unsigned char* content, size_t length, int* out) {

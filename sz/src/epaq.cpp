@@ -450,7 +450,7 @@ public:
 
 Predictor::Predictor(): pr(2048) {}
 
-int predictor_enable[7]={0,1,0,1,0,0,1};
+int predictor_enable[7]={0,1,1,1,1,0,1};
 // int cnt = 0;
 
 void Predictor::update(int y) {
@@ -476,11 +476,11 @@ void Predictor::update(int y) {
   //   bcount=0;
   //   c0 = 1;
   //   c4 = 0;
-  //   // sm[0].clear();
-  //   // sm[1].clear();
-  //   // sm[2].clear();
-  //   // sm[3].clear();
-  //   // sm[4].clear();
+    // sm[0].clear();
+    // sm[1].clear();
+    // sm[2].clear();
+    // sm[3].clear();
+    // sm[4].clear();
   // } else {
   //   cnt++;
   // }
@@ -615,7 +615,7 @@ extern "C" void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** out
 
 void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength) {
   MEM=1<<(memLevel+20);
-  inlength = inlength * 4;
+  // inlength = inlength * 4;
   U8* tmp = (U8*)malloc(inlength);
   Encoder encoder;
   encoder.tmpsize = inlength;
@@ -623,11 +623,11 @@ void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, si
     // TODO: 
     // change read and write sequence to make sure 
     // after bitpacking the data is processed in common way.
-    // for(int cur = i*4+3; cur >= i*4; cur--){
+    for(int cur = i*4+3; cur >= i*4; cur--){
       for (int j = 7; j >= 0; --j) {
-        encoder.code((inputbits[i]>>j)&1, &tmp);
+        encoder.code((inputbits[cur]>>j)&1, &tmp);
       }
-    // }
+    }
   }
   *outputbits = (U8 *)malloc((encoder.totalCnt + 1) * sizeof(U8));
   memcpy(*outputbits, tmp, encoder.totalCnt + 1);
@@ -640,7 +640,11 @@ void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, i
   U32 x = 0;
   for (int i = 0; i < 4; ++i) x = (x << 8)+ (inputbits[i] & 255);
   Encoder encoder = Encoder(x, inputbits + 4);
-  for(int i = 0; i < outlength; i++) {
-    outputbits[i] = encoder.decodebyte();
+  for(int i = 0; i < outlength/4; i++) {
+    outputbits[i*4+3] = encoder.decodebyte();
+    outputbits[i*4+2] = encoder.decodebyte();
+    outputbits[i*4+1] = encoder.decodebyte();
+    outputbits[i*4] = encoder.decodebyte();
   }
+  printf("finished\n");
 }

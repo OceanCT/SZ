@@ -161,11 +161,6 @@ public:
     update(y, limit);
     return t[cxt=cx]>>20;
   }
-  void clear() {
-    for (int i=0; i<N; ++i)
-      t[i]=1<<31;
-    cxt = 0;
-  }
 };
 
 int StateMap::dt[1024]={0};
@@ -348,6 +343,7 @@ class MatchModel {
   const int HN; // last hash table index, n/8-1
   enum {MAXLEN=62};   // maximum match length, at most 62
   U8* buf;    // input buffer
+  int validlength;
   int* ht;    // context hash -> next byte in buf
   int pos;    // number of bytes in buf
   int match;  // pointer to current byte in matched context in buf
@@ -366,6 +362,7 @@ MatchModel::MatchModel(int n): N(n/2-1), HN(n/8-1), buf(0), ht(0), pos(0),
   assert(n>=8 && (n&n-1)==0);
   alloc(buf, N+1);
   alloc(ht, HN+1);
+  validlength = 0;
 }
 
 int MatchModel::p(int y, Mixer& m) {
@@ -374,13 +371,15 @@ int MatchModel::p(int y, Mixer& m) {
   c0+=c0+y;
   ++bcount;
   if (bcount==8) {
+    validlength++;
+    // printf("marchmodel undating len..., original len: %d\n", len);
     bcount=0;
     h1=h1*(3<<3)+c0&HN;
     h2=h2*(5<<5)+c0&HN;
     buf[pos++]=c0;
     c0=1;
     pos&=N;
-
+    printf("E2: match:%d, h1:%d, h2:%d, pos:%d, len:%d\n", match, h1, h2, pos, len);
     // find or extend match
     if (len>0) {
       ++match;
@@ -389,13 +388,17 @@ int MatchModel::p(int y, Mixer& m) {
     }
     else {
       match=ht[h1];
+      // printf("E2: match:%d, pos: %d\n", match, pos);
       if (match!=pos) {
         int i;
         while (len<MAXLEN && (i=match-len-1&N)!=pos
                && buf[i]==buf[pos-len-1&N])
+        // while (len<MAXLEN && len < validlength-1 && (i=match-len-1&N)!=pos
+        //        && buf[i]==buf[pos-len-1&N])
           ++len;
       }
     }
+    // printf("E3, len: %d\n", len);
     if (len<2) {
       len=0;
       match=ht[h2];
@@ -403,21 +406,25 @@ int MatchModel::p(int y, Mixer& m) {
         int i;
         while (len<MAXLEN && (i=match-len-1&N)!=pos
                && buf[i]==buf[pos-len-1&N])
+        // while (len<MAXLEN && len < validlength-1 && (i=match-len-1&N)!=pos
+        //        && buf[i]==buf[pos-len-1&N])
           ++len;
       }
     }
   }
+  // printf("matchmodel find len: %d\n", len);
   // predict
   int cxt=c0;
+  len = 0;
   if (len>0 && (buf[match]+256>>8-bcount)==c0) {
     int b=buf[match]>>7-bcount&1;  // next bit
     if (len<16) cxt=len*2+b;
     else cxt=(len>>2)*2+b+24;
     cxt=cxt*256+buf[pos-1&N];
   }
-  else
-    len=0;
-  m.add(stretch(sm.p(y, cxt)));
+  int smp = sm.p(y, cxt);
+  // printf("E4: cxt: %d, smp: %d, stretch_smp: %d\n", cxt, smp, stretch(smp));
+  m.add(stretch(smp));
 
   // update index
   if (bcount==0) {
@@ -450,8 +457,9 @@ public:
 
 Predictor::Predictor(): pr(2048) {}
 
-int predictor_enable[7]={0,1,1,1,1,0,1};
-// int cnt = 0;
+int predictor_enable[7]={0,1,0,1,0,0,1};
+int cnt = 0;
+int bitwidth = 0;
 
 void Predictor::update(int y) {
   // return;
@@ -470,21 +478,17 @@ void Predictor::update(int y) {
   static MatchModel mm(MEM);  // predicts next bit by matching context
   assert(MEM>0);
 
-  // if(cnt == 8) {
-  //   cnt = 0;
-  //   cp[0] = cp[1] = cp[2] = cp[3] = cp[4] = t0;
-  //   bcount=0;
-  //   c0 = 1;
-  //   c4 = 0;
-    // sm[0].clear();
-    // sm[1].clear();
-    // sm[2].clear();
-    // sm[3].clear();
-    // sm[4].clear();
-  // } else {
-  //   cnt++;
-  // }
-
+  if(bitwidth) {
+    if(cnt == bitwidth-1) {
+      cnt = 0;
+      cp[0] = cp[1] = cp[2] = cp[3] = cp[4] = t0;
+      bcount=0;
+      c0 = 1;
+      c4 = 0;
+    } else {
+      cnt++;
+    }
+  }
 
   // update model
   assert(y==0 || y==1);
@@ -610,19 +614,17 @@ public:
 };
 
 
-extern "C" void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, int outlength);
-extern "C" void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength);
+extern "C" void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, int outlength, int bitwidth);
+extern "C" void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlengt, int bitwidth);
 
-void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength) {
+void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, size_t* outlength, int bitpackwidth) {
+  bitwidth = bitpackwidth;
   MEM=1<<(memLevel+20);
   // inlength = inlength * 4;
   U8* tmp = (U8*)malloc(inlength);
   Encoder encoder;
   encoder.tmpsize = inlength;
   for(int i = 0; i < inlength; i++) {
-    // TODO: 
-    // change read and write sequence to make sure 
-    // after bitpacking the data is processed in common way.
     for(int cur = i*4+3; cur >= i*4; cur--){
       for (int j = 7; j >= 0; --j) {
         encoder.code((inputbits[cur]>>j)&1, &tmp);
@@ -635,7 +637,8 @@ void epaqcompress(int memLevel, int inlength, U8* inputbits, U8** outputbits, si
   *outlength = encoder.totalCnt;
 }
 
-void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, int outlength) {
+void epaqdecompress(int memLevel, int inlength, U8* inputbits, U8* outputbits, int outlength, int bitpackwidth) {
+  bitwidth = bitpackwidth;
   MEM=1<<(memLevel+20);
   U32 x = 0;
   for (int i = 0; i < 4; ++i) x = (x << 8)+ (inputbits[i] & 255);

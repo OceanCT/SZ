@@ -6,7 +6,7 @@
 #include <assert.h>
 
 const int order = 0;
-const int addzero = 7;// 9 + 7 = 16 , 32
+const int addzero = 0;// 9 + 7 = 16 , 32
 
 // assume sizeof(int) == 4, which means 32bits;
 struct BitPacker {

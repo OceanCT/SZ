@@ -800,7 +800,7 @@ void encode_withTree(HuffmanTree* huffmanTree, int *s, size_t length, unsigned c
 {
 	printf("|encode_withTree|, length: %d\n", length);
 	if(USE_LPAQ && (USE_BITPACK == 0)) {
-		lpaq_compress(s, length, LPAQ_LEVEL, out, outSize);
+		lpaq_compress(s, length, LPAQ_LEVEL, out, outSize, 0);
 	} else if(USE_LPAQ && USE_BITPACK) {
 		// bitpacking s 
 		int base, bitwidth, bitlength;
@@ -810,7 +810,7 @@ void encode_withTree(HuffmanTree* huffmanTree, int *s, size_t length, unsigned c
 			length, bitlength, bitwidth, base);
 		// store base, bitwidth and bitlength, which is sizeof(int) * 3 = 12 bytes
 		unsigned char* lpaqbits;
-		lpaq_compress((int *)bitpackbits, bitlength, LPAQ_LEVEL, &lpaqbits, outSize);
+		lpaq_compress((int *)bitpackbits, bitlength, LPAQ_LEVEL, &lpaqbits, outSize, bitwidth);
 		*outSize += 12;
 		*out = (unsigned char*)malloc(*outSize);
 		char buffer[4];
@@ -925,7 +925,7 @@ void decode_withTree(HuffmanTree* huffmanTree, unsigned char *s, size_t targetLe
 {
 	printf("|decode_withTree|, length: %d\n", targetLength);
 	if(USE_LPAQ && (USE_BITPACK==0)) {
-		lpaq_decompress(s, targetLength, out);
+		lpaq_decompress(s, targetLength, out, 0);
 	}else if(USE_LPAQ && USE_BITPACK){
 		// bitunpack s
 		int base, bitwidth, bitlength;
@@ -935,7 +935,7 @@ void decode_withTree(HuffmanTree* huffmanTree, unsigned char *s, size_t targetLe
 		printf("bitwidth:%d, bitlength:%d \n", bitwidth, bitlength);
 		unsigned char* lpaqbits = (unsigned char*)(s+12);
 		unsigned int* bitpackbits = (unsigned int*)malloc(bitlength*sizeof(unsigned int));
-		lpaq_decompress(lpaqbits, bitlength, (int*)bitpackbits);
+		lpaq_decompress(lpaqbits, bitlength, (int*)bitpackbits, bitwidth);
 		bitunpack(bitpackbits, bitlength, bitwidth, base, out, targetLength);
 	} else if((USE_LPAQ == 0) && USE_BITPACK) {
 		int base, bitwidth, bitlength;
